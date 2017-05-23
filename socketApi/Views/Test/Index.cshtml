@@ -1,0 +1,50 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+@Scripts.Render("~/Scripts/jquery-1.8.2.js")
+
+<script type="text/javascript">
+
+        var ws;
+        $(
+            function () {
+                $("#btnConnect").click(function () {
+                    $("#messageSpan").text("连接中...");
+                    ws = new WebSocket("ws://" + window.location.hostname +":"+window.location.port+ "/api/WSChat");
+                    ws.onopen = function () {
+                        $("#messageSpan").text("已连接!");
+                    };
+                    ws.onmessage = function (result) {
+                        $("#messageSpan").text(result.data);
+                    };
+                    ws.onerror = function (error) {
+                        $("#messageSpan").text(error.data);
+                    };
+                    ws.onclose = function () {
+                        $("#messageSpan").text("断开!");
+                    };
+                });
+                $("#btnSend").click(function () {
+                    if (ws.readyState == WebSocket.OPEN) {
+                        ws.send($("#txtInput").val());
+                    }
+                    else {
+                        $("messageSpan").text("连接关闭!");
+                    }
+                });
+                $("#btnDisconnect").click(function () {
+                    ws.close();
+                });
+            }
+        );
+</script>
+
+<fieldset>
+    <input type="button" value="连接" id="btnConnect" />
+    <input type="button" value="断开" id="btnDisConnect" />
+    <hr />
+    <input type="text" id="txtInput" />
+    <input type="button" value="发送" id="btnSend" />
+    <br />
+    <span id="messageSpan" style="color:red;"></span>
+</fieldset>  
