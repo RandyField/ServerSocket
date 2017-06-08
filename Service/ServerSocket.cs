@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SocketServer
@@ -73,7 +74,7 @@ namespace SocketServer
             }
             catch (SocketException ex)
             {
-
+                Common.Helper.Logger.Error(string.Format("{0} 发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
             }
         }
 
@@ -97,14 +98,43 @@ namespace SocketServer
                         this.sessionTable.Add(newSession.IP, newSession);
                     }
                     Console.WriteLine(string.Format("{0}客户端{1}连接", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ((IPEndPoint)this.clientSocket.RemoteEndPoint).ToString()));
-                    SocketConnection socketConnection = new SocketConnection(serverSocket, clientSocket, sessionTable);
+                    SocketConnection socketConnection = new SocketConnection(serverSocket, clientSocket, ref sessionTable);
                     socketConnection.ReceiveData();//接收数据   
-                    
+                    //Thread thread = new Thread(new ThreadStart(CheckConnect));
+                    //thread.Start();
                 }
             }
             catch (SocketException ex)
             {
+                Common.Helper.Logger.Error(string.Format("{0} 发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
             }
+            //catch (Exception ex)
+            //{
+            //    Common.Helper.Logger.Error(string.Format("{0} 发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            //}
         }
+
+        //public void CheckConnect()
+        //{
+        //    while (true)
+        //    {
+        //        if (sessionTable != null || sessionTable.Count > 0)
+        //        {
+        //            for (int i = 0; i < sessionTable.Count; i++)
+        //            {
+        //                if (clientSocket.Connected == false)
+        //                {
+        //                    if (sessionTable.ContainsKey(clientSocket.RemoteEndPoint))
+        //                    {
+        //                        Console.WriteLine(string.Format("{0} 客户端{1}断开:操作-{2}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), clientSocket.RemoteEndPoint, "ReceiveCallback哈希表删除"));
+        //                        sessionTable.Remove(clientSocket.RemoteEndPoint);
+        //                    }
+        //                }
+        //            }
+                   
+        //        }
+
+        //    }
+        //}
     }
 }

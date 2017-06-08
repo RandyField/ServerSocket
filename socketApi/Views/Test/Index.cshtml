@@ -10,22 +10,34 @@
             function () {
                 $("#btnConnect").click(function () {
                     $("#messageSpan").text("连接中...");
-                    ws = new WebSocket("ws://" + window.location.hostname +":"+window.location.port+ "/api/WSChat");
+                    ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + "/api/WSChat");
+
+                    //创建一个Socket实例
+                    //var socket=new WebSocket("ws://localhost:8080")
+
+                    //打开socket
                     ws.onopen = function () {
                         $("#messageSpan").text("已连接!");
                     };
+
+                    //监听消息
                     ws.onmessage = function (result) {
                         $("#messageSpan").text(result.data);
                     };
+
+                    //监听错误
                     ws.onerror = function (error) {
                         $("#messageSpan").text(error.data);
                     };
+
+                    //监听socket的关闭
                     ws.onclose = function () {
                         $("#messageSpan").text("断开!");
                     };
                 });
                 $("#btnSend").click(function () {
                     if (ws.readyState == WebSocket.OPEN) {
+                        //发送消息
                         ws.send($("#txtInput").val());
                     }
                     else {
@@ -33,6 +45,7 @@
                     }
                 });
                 $("#btnDisconnect").click(function () {
+                    //关闭socket
                     ws.close();
                 });
             }

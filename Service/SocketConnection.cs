@@ -22,7 +22,7 @@ namespace SocketServer
         public Socket clientSocket { get; set; }
 
         public string receivedContent { get; set; }
-        byte[] MsgBuffer = new byte[4096];
+        byte[] MsgBuffer = new byte[200];
 
         //public Byte[] MsgBuffer = null;
         private int totalLength = 0;
@@ -31,6 +31,7 @@ namespace SocketServer
         bool disposeConnect = true;
 
         public SocketConnectionType Type { get; private set; }
+        public string clientIp { get; set; }
 
         /// <summary>
         ///构造函数
@@ -42,11 +43,14 @@ namespace SocketServer
             this.Type = SocketConnectionType.Server;
         }
 
-        public SocketConnection(Socket serverSocket, Socket clientSocket, Hashtable ht)
+        public SocketConnection(Socket serverSocket, Socket clientSocket, ref Hashtable ht)
         {
             this.serverSocket = serverSocket;
             this.clientSocket = clientSocket;
             this.sessionTable = ht;
+
+            this.clientIp = this.clientSocket.RemoteEndPoint.ToString();
+
             this.Type = SocketConnectionType.Server;
         }
 
@@ -95,7 +99,77 @@ namespace SocketServer
 
 
         #region 发送
+        public void SendBikeData(string data)
+        {
+            SendBikeData(System.Text.Encoding.UTF8.GetBytes(data));
+        }
 
+        /// <summary>
+        /// 发送消息-byteData
+        /// </summary>
+        /// <param name="byteData"></param>
+        private void SendBikeData(byte[] byteData)
+        {
+            try
+            {
+                //数据json字符串转化为byte数组后byte[]的长度
+                int length = byteData.Length;
+
+                ////将数据异步发送到连接的 System.Net.Sockets.Socket。
+                //this.clientSocket.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+
+                //头占一个字节 标识真实json字符串byte数组的长度
+                byte[] head = new byte[1];
+                //头信息赋值
+                head[0] = Convert.ToByte(length);
+
+                //json字符串+头 的byte数组
+                byte[] data = new byte[head.Length + byteData.Length];
+
+                //长度为200的byte数组
+                byte[] alldata = new byte[200];
+
+                //头复制进data
+                Array.Copy(head, data, head.Length);
+
+                //json字符串的byte数组追加进data
+                Array.Copy(byteData, 0, data, head.Length, byteData.Length);
+
+                //data复制进alldata(长度为200的byte数组)
+                Array.Copy(data, alldata, data.Length);
+
+
+                //alldata -------head+body+补位-----alldata.length=200
+
+                if (clientSocket.Connected != false)
+                {
+                    //this.clientSocket.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+                    //发送
+                    this.clientSocket.BeginSend(alldata, 0, alldata.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+                }
+                else
+                {
+                    dispose();
+                    disposeConnect = true;
+                    //if (sessionTable.ContainsKey(this.clientIp))
+                    //{
+                    //    Console.WriteLine("ReceiveCallback哈希表删除" + clientIp);
+                    //    sessionTable.Remove(this.clientIp);
+                    //}
+                }
+
+            }
+            catch (SocketException ex)
+            {
+                this.clientSocket.Dispose();
+                Common.Helper.Logger.Error(string.Format("{0} 发送串口数据发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            }
+
+            //catch (Exception ex)
+            //{
+            //    Common.Helper.Logger.Error(string.Format("{0} 发送串口数据发送发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            //}
+        }
 
         /// <summary>
         /// 发送消息
@@ -103,8 +177,10 @@ namespace SocketServer
         /// <param name="data"></param>
         public void Send(string data)
         {
+            //System.Text.Encoding.UTF8.GetBytes(data);
             Send(System.Text.Encoding.UTF8.GetBytes(data));
         }
+
 
         /// <summary>
         /// 发送消息-byteData
@@ -114,27 +190,62 @@ namespace SocketServer
         {
             try
             {
-                //数据byte数组的长度
+                //数据json字符串转化为byte数组后byte[]的长度
                 int length = byteData.Length;
 
-                // 将数据异步发送到连接的 System.Net.Sockets.Socket。
-                this.clientSocket.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+                // //将数据异步发送到连接的 System.Net.Sockets.Socket。
+                //this.clientSocket.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
 
-                ////头
-                //byte[] head = BitConverter.GetBytes(length);
+                ////头占一个字节 标识真实json字符串byte数组的长度
+                //byte[] head = new byte[1];
+                ////头信息赋值
+                //head[0] = Convert.ToByte(length);
 
-                ////待发送的数据
+                ////json字符串+头 的byte数组
                 //byte[] data = new byte[head.Length + byteData.Length];
+
+                ////长度为200的byte数组
+                //byte[] alldata = new byte[200];
+
+                ////头复制进data
                 //Array.Copy(head, data, head.Length);
+
+                ////json字符串的byte数组追加进data
                 //Array.Copy(byteData, 0, data, head.Length, byteData.Length);
 
-                ////发送
-                //this.serverSocket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(SendCallback), this.serverSocket);
+                ////data复制进alldata(长度为200的byte数组)
+                //Array.Copy(data, alldata, data.Length);
+
+
+                //alldata -------head+body+补位-----alldata.length=200
+
+                if (clientSocket.Connected != false)
+                {
+                    this.clientSocket.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+                    //发送
+                    //this.clientSocket.BeginSend(alldata, 0, alldata.Length, 0, new AsyncCallback(SendCallback), this.clientSocket);
+                }
+                else
+                {
+                    dispose();
+                    disposeConnect = true;
+                    //if (sessionTable.ContainsKey(this.clientIp))
+                    //{
+                    //    Console.WriteLine("ReceiveCallback哈希表删除" + clientIp);
+                    //    sessionTable.Remove(this.clientIp);
+                    //}
+                }
+
             }
             catch (SocketException ex)
             {
                 this.clientSocket.Dispose();
+                Common.Helper.Logger.Error(string.Format("{0} Socket发送发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
             }
+            //catch (Exception ex)
+            //{
+            //    Common.Helper.Logger.Error(string.Format("{0} Socket发送发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            //}
         }
 
         /// <summary>
@@ -149,7 +260,14 @@ namespace SocketServer
                 handler.EndSend(ar);
             }
             catch (SocketException ex)
-            { }
+            {
+                Common.Helper.Logger.Error(string.Format("{0} 发送回调函数发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            }
+
+            catch (Exception ex)
+            {
+                Common.Helper.Logger.Error(string.Format("{0} 发送回调函数发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            }
         }
 
         #endregion
@@ -182,29 +300,54 @@ namespace SocketServer
                 if (REnd > 0)
                 {
                     disposeConnect = false;
+
+                    //总接收的数据
                     byte[] data = new byte[REnd];
+
+
                     Array.Copy(MsgBuffer, 0, data, 0, REnd);
 
-                    //收到结果                
-                    string str = System.Text.Encoding.UTF8.GetString(data);
+                    ////数据长度
+                    //int dataLength = 0;
+
+                    ////头
+                    //byte[] dataArrayLength = new byte[1];
+                    //Array.Copy(data, dataArrayLength, 1);
+
+                    ////读取头信息-数据长度
+                    //dataLength = Convert.ToInt32(dataArrayLength[0]);
+                    ////dataLength = BitConverter.ToInt32(dataArrayLength, 0);
+
+                    ////数据
+                    //byte[] dataArray = new byte[dataLength];
+                    //Array.Copy(data, 1, dataArray, 0, dataLength);
+
+                    ////读取数据       
+                    //string str = System.Text.Encoding.UTF8.GetString(dataArray);
 
                     //在此处可以对data进行按需处理
-                    Console.WriteLine(string.Format("客户端{0}传来消息:{1}", ((IPEndPoint)this.clientSocket.RemoteEndPoint).ToString(), str));
-                    
+                    //Console.WriteLine(string.Format("{0} 客户端{1}传来消息:{2}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ((IPEndPoint)this.clientSocket.RemoteEndPoint).ToString(), str));
+
                     //分发
                     foreach (Session session in this.sessionTable.Values)
                     {
-                        
-                        JObject obj = JObject.Parse(str);
-                        if (obj["type"] != null)
-                        {
-                            SocketConnection socketConnection = new SocketConnection(session.ClientSocket);
-                            socketConnection.Send(obj.ToString());
-                        }
+                        SocketConnection socketConnection = new SocketConnection(session.ClientSocket);
+                        socketConnection.Send(data);
                     }
 
-                    clientSocket.BeginReceive(MsgBuffer, 0, MsgBuffer.Length, 0, new AsyncCallback(ReceiveCallback), null);
+                    if (clientSocket.Connected != false)
+                    {
+                        clientSocket.BeginReceive(MsgBuffer, 0, MsgBuffer.Length, 0, new AsyncCallback(ReceiveCallback), null);
+                    }
+                    else
+                    {
 
+                        if (sessionTable.ContainsKey(this.clientIp))
+                        {
+                            Console.WriteLine(string.Format("{0} 客户端{1}断开:操作-{2}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), clientIp, "ReceiveCallback哈希表删除"));
+                            sessionTable.Remove(this.clientIp);
+                        }
+                    }
                 }
                 else
                 {
@@ -214,9 +357,15 @@ namespace SocketServer
             }
             catch (SocketException ex)
             {
-                dispose();
-                disposeConnect = true;
+                //dispose();
+                //disposeConnect = true;
+                Common.Helper.Logger.Info(string.Format("{0} 接收回调函数发生Socket异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
             }
+
+            //catch (Exception ex)
+            //{
+            //    Common.Helper.Logger.Error(string.Format("{0} 接收回调函数发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
+            //}
         }
 
         /// <summary>
@@ -231,14 +380,14 @@ namespace SocketServer
             {
                 //this.clientSocket.Shutdown(SocketShutdown.Both);
                 //this.clientSocket.Close();
-
-                this.clientSocket.Shutdown(SocketShutdown.Both);
+                //this.clientSocket.Shutdown(SocketShutdown.Both);
                 this.clientSocket.Dispose();
                 this.clientSocket.Close();
                 this.clientSocket = null;
             }
             catch (Exception ex)
             {
+                Common.Helper.Logger.Error(string.Format("{0} Socket释放资源发生异常，异常信息{1}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), ex.ToString()));
             }
         }
         #endregion
